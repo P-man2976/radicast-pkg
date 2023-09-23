@@ -26,7 +26,8 @@ jobs:
             - run: yarn --frozen-lockfile
             - run: |
                   set -xeu
-                  yarn pkg --out-path=radicast-pkg-${{ matrix.pkg_target }} -t node18-${{ matrix.pkg_target }}
+                  yarn radicast-build
+                  yarn pkg --out-path=radicast-pkg-${{ matrix.pkg_target }} -t node18-${{ matrix.pkg_target }} ./radicast
             - name: generate assets
               run: |
                   set -xeu
@@ -37,82 +38,82 @@ jobs:
                   fi
             - uses: actions/upload-artifact@v3
               with:
-                name: upload x64 assets
-                path: |
-                  radicast-pkg-*.tar.gz
-                  radicast-pkg-*.zip
+                  name: x64_assets
+                  path: |
+                      radicast-pkg-*.tar.gz
+                      radicast-pkg-*.zip
 
     build_arm:
         runs-on: ubuntu-latest
 
         strategy:
             matrix:
-              pkg_target:
-                - linuxstatic-arm64
-                - linuxstatic-armv7
-                - linux-arm64
-                - mac-arm64
-                - alpine-arm64
-                - win-arm64
-        
+                pkg_target:
+                    - linuxstatic-arm64
+                    - linuxstatic-armv7
+                    - linux-arm64
+                    - mac-arm64
+                    - alpine-arm64
+                    - win-arm64
 
         steps:
             - uses: actions/checkout@v4
               with:
-                submodules: true
+                  submodules: true
             - name: set up QEMU
               uses: docker/setup-qemu-action@v3
             - run: |
-                set -xeu
-                # NOTE: Using node:18 takes over 21 minutes
-                docker run --rm -i -v $PWD:/app --platform=linux/arm64/v8 node:20 bash << 'EOF'
-                set -xeu
-                # Install ldid for macos-arm64 signing
-                curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_linux_aarch64
-                chmod +x ldid_linux_aarch64
-                mv ./ldid_linux_aarch64 /usr/local/bin/ldid
-                cd /app
-                yarn --frozen-lockfile
-                yarn pkg --out-path=radicast-pkg-${{ matrix.pkg_target }} -t node18-${{ matrix.pkg_target }} ./radicast
-                EOF
+                  set -xeu
+                  # NOTE: Using node:18 takes over 21 minutes
+                  docker run --rm -i -v $PWD:/app --platform=linux/arm64/v8 node:20 bash << 'EOF'
+                  set -xeu
+                  # Install ldid for macos-arm64 signing
+                  curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_linux_aarch64
+                  chmod +x ldid_linux_aarch64
+                  mv ./ldid_linux_aarch64 /usr/local/bin/ldid
+                  cd /app
+                  yarn --frozen-lockfile
+                  yarn radicast-build
+                  yarn pkg --out-path=radicast-pkg-${{ matrix.pkg_target }} -t node18-${{ matrix.pkg_target }} ./radicast
+                  EOF
             - name: generate assets
               run: |
-                set -xeu
-                if [ "${{ matrix.pkg_target }}" = "win-arm64" ]; then
-                  zip -r radicast-pkg-${{ matrix.pkg_target }}.zip ./radicast-pkg-${{ matrix.pkg_target }}
-                else
-                  tar czvf radicast-pkg-${{ matrix.pkg_target }}.tar.gz ./radicast-pkg-${{ matrix.pkg_target }}
-                fi
+                  set -xeu
+                  if [ "${{ matrix.pkg_target }}" = "win-arm64" ]; then
+                    zip -r radicast-pkg-${{ matrix.pkg_target }}.zip ./radicast-pkg-${{ matrix.pkg_target }}
+                  else
+                    tar czvf radicast-pkg-${{ matrix.pkg_target }}.tar.gz ./radicast-pkg-${{ matrix.pkg_target }}
+                  fi
             - uses: actions/upload-artifact@v3
               with:
-                name: upload arm assets
-                path: |
-                  radicast-pkg-*.tar.gz
-                  radicast-pkg-*.zip
-    
+                  name: arm_assets
+                  path: |
+                      radicast-pkg-*.tar.gz
+                      radicast-pkg-*.zip
+
     release:
         if: startsWith(github.ref, 'refs/tags/')
         needs:
-          - build_x64
-          - build_arm
+            - build_x64
+            - build_arm
         runs-on: ubuntu-latest
         steps:
-          - uses: actions/download-artifact@v3
-            with:
-              name: download x64 assets
-              path: .
-          - uses: actions/download-artifact@v3
-            with:
-              name: download arm assets
-              path: .
-          - run: |
-              set -xeu
-              mkdir ./publish
-              mv radicast-pkg-* ./publish
-              # Show and create checksums
-              (cd publish && sha256sum * | tee /dev/stderr > sha256sums.txt)
-              TAG=$(echo $GITHUB_REF | cut -d / -f 3)
-              VERSION=$TAG
-              REPO=$(echo $GITHUB_REPOSITORY | cut -d / -f 2)
-              curl -L https://github.com/tcnksm/ghr/releases/download/v0.14.0/ghr_v0.14.0_linux_amd64.tar.gz | tar xzf -
-              ./ghr_v0.14.0_linux_amd64/ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${GITHUB_ACTOR} -r ${REPO} -c ${GITHUB_SHA} -delete -n ${VERSION} ${VERSION} ./publish
+            - uses: actions/download-artifact@v3
+              with:
+                  name: x64_assets
+                  path: .
+            - uses: actions/download-artifact@v3
+              with:
+                  name: arm_assets
+                  path: .
+            - run: |
+                  set -xeu
+                  mkdir ./publish
+                  mv radicast-pkg-* ./publish
+                  # Show and create checksums
+                  (cd publish && sha256sum * | tee /dev/stderr > sha256sums.txt)
+                  TAG=$(echo $GITHUB_REF | cut -d / -f 3)
+                  VERSION=$TAG
+                  REPO=$(echo $GITHUB_REPOSITORY | cut -d / -f 2)
+                  curl -L https://github.com/tcnksm/ghr/releases/download/v0.14.0/ghr_v0.14.0_linux_amd64.tar.gz | tar xzf -
+                  ./ghr_v0.14.0_linux_amd64/ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${GITHUB_ACTOR} -r ${REPO} -c ${GITHUB_SHA} -delete -n ${VERSION} ${VERSION} ./publish
