@@ -1,0 +1,3 @@
+[submodule "radicast"]
+	path = radicast
+	url = https://github.com/P-man2976/radicast.git

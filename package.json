@@ -1,0 +1,17 @@
+{
+	"name": "radicast-pkg",
+	"description": "Portable radicast executable",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"radicast-build": "cd radicast && yarn install --frozen-lockfile && yarn build",
+		"pkg-x64": "yarn radicast-build && pkg --out-path=dist -t node18-linuxstatic-x64,node18-linux-x64,node18-mac-x64,node18-alpine-x64,node18-win-x64 ./radicast",
+		"pkg-arm": "yarn radicast-build && pkg --out-path=dist -t node18-linuxstatic-arm64,node18-linuxstatic-armv7,node18-linux-arm64,node18-mac-arm64,node18-alpine-arm64,node18-win-arm64 ./radicast"
+	},
+	"repository": "https://github.com/P-man2976/radicast-pkg.git",
+	"author": "P-man2976 <ikmy1119924@gmail.com>",
+	"license": "MIT",
+	"devDependencies": {
+		"pkg": "^5.8.1"
+	}
+}
