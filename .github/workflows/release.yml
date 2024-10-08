@@ -36,9 +36,9 @@ jobs:
                   else
                     tar czvf radicast-pkg-${{ matrix.pkg_target }}.tar.gz ./radicast-pkg-${{ matrix.pkg_target }}
                   fi
-            - uses: actions/upload-artifact@v3
+            - uses: actions/upload-artifact@v4
               with:
-                  name: x64_assets
+                  name: x64_assets_${{ matrix.pkg_target }}
                   path: |
                       radicast-pkg-*.tar.gz
                       radicast-pkg-*.zip
@@ -84,9 +84,9 @@ jobs:
                   else
                     tar czvf radicast-pkg-${{ matrix.pkg_target }}.tar.gz ./radicast-pkg-${{ matrix.pkg_target }}
                   fi
-            - uses: actions/upload-artifact@v3
+            - uses: actions/upload-artifact@v4
               with:
-                  name: arm_assets
+                  name: arm_assets_${{ matrix.pkg_target }}
                   path: |
                       radicast-pkg-*.tar.gz
                       radicast-pkg-*.zip
@@ -98,14 +98,18 @@ jobs:
             - build_arm
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/download-artifact@v3
+            - uses: actions/download-artifact@v4
               with:
                   name: x64_assets
                   path: .
-            - uses: actions/download-artifact@v3
+                  pattern: x64_assets_*
+                  merge-multiple: true
+            - uses: actions/download-artifact@v4
               with:
                   name: arm_assets
                   path: .
+                  pattern: arm_assets_*
+                  merge-multiple: true
             - run: |
                   set -xeu
                   mkdir ./publish
